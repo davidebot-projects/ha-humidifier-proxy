@@ -1,0 +1,11 @@
+{
+  "domain": "humidifier_proxy",
+  "name": "Humidifier Proxy",
+  "codeowners": ["@davidebot"],
+  "config_flow": true,
+  "documentation": "https://github.com/davidebot-projects/ha-humidifier-proxy",
+  "integration_type": "helper",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/davidebot-projects/ha-humidifier-proxy/issues",
+  "version": "1.0.0"
+}

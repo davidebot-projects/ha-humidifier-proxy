@@ -1,0 +1,90 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Scegli un dispositivo",
+        "description": "Scegli il dispositivo le cui entità vanno combinate in un umidificatore. Funziona con qualsiasi integrazione: LocalTuya, MQTT, ESPHome, Shelly, Modbus e altre.",
+        "data": {
+          "device_id": "Dispositivo"
+        },
+        "data_description": {
+          "device_id": "Le sue entità vengono analizzate e nel passo successivo viene proposta una mappatura."
+        }
+      },
+      "mapping": {
+        "title": "Conferma la mappatura",
+        "description": "Mappatura proposta per {device}. Correggi ciò che non torna; svuotare un campo opzionale rimuove quella funzionalità.",
+        "data": {
+          "device_class": "Classe dispositivo",
+          "power_entity": "Accensione",
+          "target_humidity_entity": "Umidità target",
+          "current_humidity_entity": "Umidità attuale",
+          "mode_entity": "Modalità",
+          "fan_speed_entity": "Velocità ventola",
+          "oscillate_entity": "Oscillazione",
+          "extra_entities": "Riporta anche come attributi"
+        },
+        "data_description": {
+          "power_entity": "Accende e spegne il dispositivo.",
+          "target_humidity_entity": "Contiene il setpoint di umidità. Minimo, massimo e passo vengono ereditati dal proxy.",
+          "current_humidity_entity": "Riporta l'umidità relativa misurata.",
+          "mode_entity": "Esposta come modalità operative dell'umidificatore.",
+          "fan_speed_entity": "Se impostata viene creata un'entità fan, che HomeKit mostra come ventola nativa con cursore della velocità.",
+          "oscillate_entity": "Esposto come oscillazione della ventola. Richiede l'entità velocità ventola.",
+          "extra_entities": "Rispecchiate come attributi dell'entità humidifier, così l'intero dispositivo resta leggibile da un unico punto senza aggiungere accessori HomeKit."
+        }
+      }
+    },
+    "error": {
+      "oscillate_requires_fan": "L'oscillazione richiede un'entità velocità ventola a cui agganciarsi."
+    },
+    "abort": {
+      "already_configured": "Questo dispositivo ha già un Humidifier Proxy."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Humidifier Proxy",
+        "description": "Mappatura proposta per {device}. Correggi ciò che non torna; svuotare un campo opzionale rimuove quella funzionalità.",
+        "data": {
+          "device_class": "Classe dispositivo",
+          "power_entity": "Accensione",
+          "target_humidity_entity": "Umidità target",
+          "current_humidity_entity": "Umidità attuale",
+          "mode_entity": "Modalità",
+          "fan_speed_entity": "Velocità ventola",
+          "oscillate_entity": "Oscillazione",
+          "extra_entities": "Riporta anche come attributi"
+        },
+        "data_description": {
+          "power_entity": "Accende e spegne il dispositivo.",
+          "target_humidity_entity": "Contiene il setpoint di umidità. Minimo, massimo e passo vengono ereditati dal proxy.",
+          "current_humidity_entity": "Riporta l'umidità relativa misurata.",
+          "mode_entity": "Esposta come modalità operative dell'umidificatore.",
+          "fan_speed_entity": "Se impostata viene creata un'entità fan, che HomeKit mostra come ventola nativa con cursore della velocità.",
+          "oscillate_entity": "Esposto come oscillazione della ventola. Richiede l'entità velocità ventola.",
+          "extra_entities": "Rispecchiate come attributi dell'entità humidifier, così l'intero dispositivo resta leggibile da un unico punto senza aggiungere accessori HomeKit."
+        }
+      }
+    },
+    "error": {
+      "oscillate_requires_fan": "L'oscillazione richiede un'entità velocità ventola a cui agganciarsi."
+    }
+  },
+  "entity": {
+    "fan": {
+      "fan": {
+        "name": "Ventola"
+      }
+    }
+  },
+  "selector": {
+    "device_class": {
+      "options": {
+        "dehumidifier": "Deumidificatore",
+        "humidifier": "Umidificatore"
+      }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pick a device",
+        "description": "Choose the device whose entities should be combined into a humidifier. Any integration works: LocalTuya, MQTT, ESPHome, Shelly, Modbus and so on.",
+        "data": {
+          "device_id": "Device"
+        },
+        "data_description": {
+          "device_id": "Its entities are inspected and a mapping is proposed on the next step."
+        }
+      },
+      "mapping": {
+        "title": "Confirm the mapping",
+        "description": "Suggested mapping for {device}. Correct anything that looks wrong; clearing an optional field removes that feature.",
+        "data": {
+          "device_class": "Device class",
+          "power_entity": "Power",
+          "target_humidity_entity": "Target humidity",
+          "current_humidity_entity": "Current humidity",
+          "mode_entity": "Mode",
+          "fan_speed_entity": "Fan speed",
+          "oscillate_entity": "Oscillation",
+          "extra_entities": "Also report as attributes"
+        },
+        "data_description": {
+          "power_entity": "Turns the device on and off.",
+          "target_humidity_entity": "Holds the humidity setpoint. Its min, max and step are inherited by the proxy.",
+          "current_humidity_entity": "Reports the measured relative humidity.",
+          "mode_entity": "Exposed as the humidifier's operating modes.",
+          "fan_speed_entity": "When set, a fan entity is created. HomeKit renders it as a native fan with a speed slider.",
+          "oscillate_entity": "Exposed as the fan's oscillation control. Requires a fan speed entity.",
+          "extra_entities": "Mirrored as attributes of the humidifier entity, so the whole device stays readable from one place without adding HomeKit accessories."
+        }
+      }
+    },
+    "error": {
+      "oscillate_requires_fan": "Oscillation needs a fan speed entity to attach to."
+    },
+    "abort": {
+      "already_configured": "This device already has a Humidifier Proxy."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Humidifier Proxy options",
+        "description": "Suggested mapping for {device}. Correct anything that looks wrong; clearing an optional field removes that feature.",
+        "data": {
+          "device_class": "Device class",
+          "power_entity": "Power",
+          "target_humidity_entity": "Target humidity",
+          "current_humidity_entity": "Current humidity",
+          "mode_entity": "Mode",
+          "fan_speed_entity": "Fan speed",
+          "oscillate_entity": "Oscillation",
+          "extra_entities": "Also report as attributes"
+        },
+        "data_description": {
+          "power_entity": "Turns the device on and off.",
+          "target_humidity_entity": "Holds the humidity setpoint. Its min, max and step are inherited by the proxy.",
+          "current_humidity_entity": "Reports the measured relative humidity.",
+          "mode_entity": "Exposed as the humidifier's operating modes.",
+          "fan_speed_entity": "When set, a fan entity is created. HomeKit renders it as a native fan with a speed slider.",
+          "oscillate_entity": "Exposed as the fan's oscillation control. Requires a fan speed entity.",
+          "extra_entities": "Mirrored as attributes of the humidifier entity, so the whole device stays readable from one place without adding HomeKit accessories."
+        }
+      }
+    },
+    "error": {
+      "oscillate_requires_fan": "Oscillation needs a fan speed entity to attach to."
+    }
+  },
+  "entity": {
+    "fan": {
+      "fan": {
+        "name": "Fan"
+      }
+    }
+  },
+  "selector": {
+    "device_class": {
+      "options": {
+        "dehumidifier": "Dehumidifier",
+        "humidifier": "Humidifier"
+      }
+    }
+  }
+}
