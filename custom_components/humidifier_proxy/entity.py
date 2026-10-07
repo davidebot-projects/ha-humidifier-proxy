@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from math import isfinite
 
 from homeassistant.components.select import ATTR_OPTIONS
 from homeassistant.config_entries import ConfigEntry
@@ -71,8 +72,8 @@ class ProxyEntity(Entity):
         for entity_id in tracked:
             if self.hass.states.get(entity_id) is None:
                 _LOGGER.warning(
-                    "%s: source entity %s does not exist; the proxy stays "
-                    "unavailable until it appears",
+                    "%s: source entity %s does not exist; its value remains "
+                    "unknown until it appears",
                     self.entity_id,
                     entity_id,
                 )
@@ -115,7 +116,8 @@ class ProxyEntity(Entity):
         if (state := self._source_state(entity_id)) is None:
             return None
         try:
-            return float(state.state)
+            value = float(state.state)
+            return value if isfinite(value) else None
         except (TypeError, ValueError):
             return None
 
@@ -126,7 +128,8 @@ class ProxyEntity(Entity):
         if not entity_id or (state := self.hass.states.get(entity_id)) is None:
             return fallback
         try:
-            return float(state.attributes.get(attribute, fallback))
+            value = float(state.attributes.get(attribute, fallback))
+            return value if isfinite(value) else fallback
         except (TypeError, ValueError):
             return fallback
 

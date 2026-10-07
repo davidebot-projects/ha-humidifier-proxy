@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
+from math import isfinite
 from typing import Any
 
 from homeassistant.components.humidifier import (
@@ -15,7 +16,8 @@ from homeassistant.components.humidifier import (
 )
 from homeassistant.components.number import ATTR_MAX, ATTR_MIN, ATTR_STEP
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import slugify
@@ -28,7 +30,7 @@ from .const import (
     CONF_TARGET_HUMIDITY_ENTITY,
     DEVICE_CLASS_DEHUMIDIFIER,
 )
-from .entity import ProxyEntity
+from .entity import INVALID_STATES, ProxyEntity
 
 
 async def async_setup_entry(
@@ -59,6 +61,11 @@ class HumidifierProxyEntity(ProxyEntity, HumidifierEntity):
         options = entry.options
         self._target_entity: str = options[CONF_TARGET_HUMIDITY_ENTITY]
         self._humidity_entity: str = options[CONF_CURRENT_HUMIDITY_ENTITY]
+        self._last_limits = (
+            float(DEFAULT_MIN_HUMIDITY), float(DEFAULT_MAX_HUMIDITY), 1.0
+        )
+        self._has_valid_limits = False
+        self._read_humidity_limits(hass.states.get(self._target_entity))
         self._mode_entity: str | None = options.get(CONF_MODE_ENTITY)
         self._extra_entities: list[str] = list(options.get(CONF_EXTRA_ENTITIES) or [])
         self._extra_keys = _attribute_keys(hass, self._extra_entities)
@@ -107,21 +114,41 @@ class HumidifierProxyEntity(ProxyEntity, HumidifierEntity):
     @property
     def min_humidity(self) -> float:
         """Return the minimum supported setpoint."""
-        return self._numeric_attribute(
-            self._target_entity, ATTR_MIN, DEFAULT_MIN_HUMIDITY
-        )
+        return self._humidity_limits[0]
 
     @property
     def max_humidity(self) -> float:
         """Return the maximum supported setpoint."""
-        return self._numeric_attribute(
-            self._target_entity, ATTR_MAX, DEFAULT_MAX_HUMIDITY
-        )
+        return self._humidity_limits[1]
 
     @property
     def target_humidity_step(self) -> float | None:
         """Return the setpoint step."""
-        return self._numeric_attribute(self._target_entity, ATTR_STEP, 1.0) or 1.0
+        return self._humidity_limits[2]
+
+    def _read_humidity_limits(self, state: State | None) -> None:
+        """Cache a complete, valid source grid; keep it during outages."""
+        if state is None or state.state in INVALID_STATES:
+            return
+        try:
+            minimum, maximum, step = (
+                float(state.attributes[key]) for key in (ATTR_MIN, ATTR_MAX, ATTR_STEP)
+            )
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return
+        if (
+            all(isfinite(value) for value in (minimum, maximum, step))
+            and 0 <= minimum <= maximum <= 100
+            and step > 0
+        ):
+            self._last_limits = (minimum, maximum, step)
+            self._has_valid_limits = True
+
+    @property
+    def _humidity_limits(self) -> tuple[float, float, float]:
+        """Read live limits, falling back to the last valid source grid."""
+        self._read_humidity_limits(self.hass.states.get(self._target_entity))
+        return self._last_limits
 
     @property
     def action(self) -> HumidifierAction | None:
@@ -182,6 +209,17 @@ class HumidifierProxyEntity(ProxyEntity, HumidifierEntity):
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Write a new setpoint to the source number entity."""
+        if self._numeric_state(self._target_entity) is None:
+            raise ServiceValidationError(
+                f"Target humidity source {self._target_entity} is unavailable "
+                "or has an invalid numeric state"
+            )
+        self._read_humidity_limits(self.hass.states.get(self._target_entity))
+        if not self._has_valid_limits:
+            raise ServiceValidationError(
+                f"Target humidity source {self._target_entity} has no valid "
+                "minimum, maximum and step"
+            )
         await self._async_set_number(
             self._target_entity, self._normalize_humidity(float(humidity))
         )
@@ -200,11 +238,12 @@ class HumidifierProxyEntity(ProxyEntity, HumidifierEntity):
         slider always moves in whole percent - so a device that accepts 25-90 in
         steps of 5 would otherwise be sent values it silently rejects or rounds.
         """
-        d_min = Decimal(str(self.min_humidity))
-        d_max = Decimal(str(self.max_humidity))
-        d_step = Decimal(str(self.target_humidity_step or 1.0))
-        if d_step <= 0:
-            d_step = Decimal("1")
+        if not isfinite(humidity):
+            raise ServiceValidationError("Target humidity must be finite")
+        minimum, maximum, step = self._humidity_limits
+        d_min = Decimal(str(minimum))
+        d_max = Decimal(str(maximum))
+        d_step = Decimal(str(step))
 
         d_value = min(max(Decimal(str(humidity)), d_min), d_max)
         steps = ((d_value - d_min) / d_step).quantize(

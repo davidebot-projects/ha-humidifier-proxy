@@ -62,9 +62,15 @@ nothing to type and nothing to mistype. The same form is available later under
   number entity, and every requested target is snapped onto that grid before it
   is written — including a step-down when rounding would overshoot the maximum.
   Home Assistant only validates min/max, never the step, and HomeKit's slider
-  always moves in whole percent.
+  always moves in whole percent. The last valid minimum, maximum and step are
+  retained if the source becomes unavailable or loses these attributes.
+  Non-finite numeric readings are ignored. Setpoint commands are rejected while
+  the target source is unavailable, has an invalid numeric state, or has never
+  supplied a valid minimum, maximum and step; power
+  commands remain accessible when their own source is available.
 - **Action.** `drying` / `humidifying` / `idle` / `off`, derived from power plus
-  measured vs target humidity.
+  measured vs target humidity. This is an estimate, not a compressor status: it
+  does not detect a full tank, defrost or modes that ignore the humidity target.
 - **Availability follows the power entity only.** A sensor that stops reporting
   while the device is idle must never make the proxy uncontrollable.
 - **Renames are followed.** If a source entity is renamed, the stored mapping is
@@ -98,36 +104,48 @@ The device accepts 25–90 % in steps of 5, so a request for 53 % is snapped to
 
 ## HomeKit
 
-Two accessories cover the whole device. Home Assistant's bridge does **not**
-wire fan speed, swing, child lock or water level onto the HomeKit
-`HumidifierDehumidifier` service, even though the HAP profile allows them, which
-is why the fan is a separate entity.
+For one native **Dehumidifier** accessory, expose only `humidifier.*`:
 
 ```yaml
 - name: HASS Clima
-  port: 21062
+  port: 21063
   mode: bridge
-
   filter:
     include_entities:
-      - humidifier.<device>
-      - fan.<device>_fan
-
-  entity_config:
-    fan.<device>_fan:
-      type: air_purifier
+      - humidifier.aquaria_s1_wi_fi_bluetooth
 ```
 
-Substitute the real entity ids: the fan's is language-dependent, as described
-under [Behaviour worth knowing](#behaviour-worth-knowing).
+Replace the entity id with the real proxy id from Home Assistant. This provides
+power, current humidity and target humidity, and lets HomePod recognize the
+accessory as a dehumidifier. For a humidifier source, the accessory is instead
+a humidifier. The entity already publishes `current_humidity`, so no
+`linked_humidity_sensor` is needed.
 
-`type: air_purifier` is optional but worth it: it makes the bridge fold the
-device's **temperature and humidity sensors as linked services into the fan
-accessory** instead of publishing them as two more tiles. Without it they would
-either be missing or cost one accessory each.
+The bridge does not expose operating modes, fan speed or swing on this
+accessory. You can still control them from Home Assistant. A low humidity target
+keeps the device working while measured humidity remains above it; it does not
+select Laundry mode or change the fan speed.
 
-The humidifier entity already publishes `current_humidity`, so
-`linked_humidity_sensor` is not needed.
+### Optional fan accessory
+
+If you also want speed and swing in Apple Home, add the proxy's `fan.*` entity
+to the bridge filter. This creates a second accessory. Fan entity ids depend
+on Home Assistant's language, as described under
+[Behaviour worth knowing](#behaviour-worth-knowing).
+
+You can configure that fan as an air purifier and explicitly link source
+sensors to it:
+
+```yaml
+entity_config:
+  fan.aquaria_s1_wi_fi_bluetooth_ventola:
+    type: air_purifier
+    linked_temperature_sensor: sensor.your_temperature_sensor
+    linked_humidity_sensor: sensor.your_humidity_sensor
+```
+
+Replace all example ids with your actual entities. Use this only if you want
+the additional fan accessory; it is not required for the dehumidifier.
 
 If the device is already in Apple Home natively, do not expose it twice.
 
@@ -148,6 +166,17 @@ Proxy*, download and restart. Or copy `custom_components/humidifier_proxy` to
 
 It is not a hygrostat. It does not decide when to run the device, implement
 hysteresis, or replace the control logic of the hardware.
+
+## Development checks
+
+From the repository directory:
+
+```sh
+python3 -m unittest discover -s tests -v
+```
+
+Tests cover setpoint snapping, source limits, invalid numeric values, outages,
+recovery and power availability.
 
 ## License
 
